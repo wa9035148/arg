@@ -1,32 +1,9 @@
 #ifndef _ARG_H_
 #define _ARG_H_
 
-// option parser
+// Shortest option parser for C++
+// https://github.com/anjn/arg
 
-// -- Example --
-//
-// int main(int argc, char** argv) {
-//   int test;
-//
-//   {
-//     ARG(a);
-//     
-//     // argument order = variable, long, short, help, default
-//     a(test, 't');
-//     a(test, "--test");
-//     a(test, 't', 123);
-//     a(test, "--test", 123);
-//     a(test, 't', "help", 123);
-//     a(test, "--test", "help", 123);
-//     a(test, 't', "help");
-//     a(test, "--test", "help");
-//     a(test, "--test", 't', 123);
-//     a(test, "--test", 't', "help");
-//     a(test, "--test", 't', "help", 123);
-//   }
-//   
-//   return 0;
-// }
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,7 +15,12 @@
 #include <map>
 #include <set>
 
-#define ARG(a,...) arg a(argc,argv,##__VA_ARGS__);
+#define arg_begin(...) arg argobj(argc,argv,##__VA_ARGS__)
+#define arg_end   argobj.check()
+#define argi(var,...)  int var; argobj(var,#var,##__VA_ARGS__)
+#define argd(var,...)  double var; argobj(var,#var,##__VA_ARGS__)
+#define argb(var,...)  bool var; argobj(var,#var,##__VA_ARGS__)
+#define args(var,...)  char var[1024]; argobj(var,#var,##__VA_ARGS__)
 
 namespace arg_helper {
   struct helper {
@@ -137,18 +119,18 @@ namespace arg_helper {
     }
   };
   
-  // template<int N>
-  // struct parser<char[N]> {
-  //   static void parse(char target[N], char *value) {
-  //     strncpy(target, value, N);
-  //   }
-  //   static bool valid(char *value) {
-  //     return strlen(value) > 0;
-  //   }
-  //   static bool require_value() {
-  //     return true;
-  //   }
-  // };
+  template<int N>
+  struct parser<char[N]> {
+    static void parse(char target[N], char *value) {
+      strncpy(target, value, N);
+    }
+    static bool valid(char *value) {
+      return strlen(value) > 0;
+    }
+    static bool require_value() {
+      return true;
+    }
+  };
 }
 
 class arg {
@@ -270,20 +252,22 @@ public:
     char* s = (char*) target;
     parse(s, lopt, sopt, help, (char*) defval);
   }
+
+  void help() {
+    fprintf(stderr, "Usage: %s\n\n", progname);
+    for (std::vector<std::string>::iterator h = help_strs.begin(); 
+         h != help_strs.end(); h++) {
+      fprintf(stderr, "%s\n", h->c_str());
+    }
+    exit(0);
+  }
   
   // error check
   void check() {
     // check help
     bool show_help;
-    operator()(show_help, "--help", 'h', "Show this message", false);
-    if (show_help) {
-      fprintf(stderr, "Usage: %s\n\n", progname);
-      for (std::vector<std::string>::iterator h = help_strs.begin(); 
-           h != help_strs.end(); h++) {
-        fprintf(stderr, "%s\n", h->c_str());
-      }
-      exit(0);
-    }
+    operator()(show_help, "help", 'h', "Show this message", false);
+    if (show_help) help();
     
     // check unknow option
     for (arg_map::iterator o = options.begin(); o != options.end(); o++) {
@@ -376,11 +360,11 @@ private:
       std::ostringstream h;
       h << "  ";
       if (sopt != 0 && lopt != NULL)
-        h << "-" << sopt << ", " << lopt;
+        h << "-" << sopt << ", --" << lopt;
       else if (sopt != 0)
         h << "-" << sopt;
       else
-        h << "    " << lopt;
+        h << "    --" << lopt;
       int len = 30 - h.str().size();
       for (int i=0; i<len; i++) h << " ";
       h << help;
@@ -391,7 +375,7 @@ private:
     for (arg_map::iterator o = options.begin(); o != options.end(); o++) {
       char *name  = o->first;
       char *value = o->second.first;
-      if ((lopt != NULL &&strcmp(name, lopt) == 0) ||
+      if ((lopt != NULL && strlen(name) > 2 && strcmp(name+2, lopt) == 0) ||
           (strlen(name) == 2 && name[1] == sopt)) {
         if (arg_helper::parser<T>::require_value() && value == EMPTY_ARG) {
           // empty
@@ -425,9 +409,9 @@ private:
   std::string optname(const char* lopt, const char sopt) {
     std::ostringstream name;
     if (lopt != NULL && sopt != 0)
-      name << "option '-" << sopt << "," << lopt << "'";
+      name << "option '-" << sopt << ",--" << lopt << "'";
     else if (lopt != NULL)
-      name << "option '" << lopt << "'";
+      name << "option '--" << lopt << "'";
     else
       name << "option '-" << sopt << "'";
     return name.str();
