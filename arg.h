@@ -154,34 +154,42 @@ private:
   } while (0)
   
 public:
+  bool replace_underscore_with_hyphen;
+
   arg(int& argc, char** argv): 
     EMPTY_ARG(""), progname(argv[0]),
-    require_arg_min(-1), require_arg_max(-1) {
+    require_arg_min(-1), require_arg_max(-1),
+    replace_underscore_with_hyphen(true) {
     parse_arg(argc, argv);
   }
   arg(int& argc, char** argv, const char* prog): 
     EMPTY_ARG(""), progname(prog),
-    require_arg_min(-1), require_arg_max(-1) {
+    require_arg_min(-1), require_arg_max(-1),
+    replace_underscore_with_hyphen(true) {
     parse_arg(argc, argv);
   }
   arg(int& argc, char** argv, const int arg_min):
     EMPTY_ARG(""), progname(argv[0]),
-    require_arg_min(arg_min), require_arg_max(-1) {
+    require_arg_min(arg_min), require_arg_max(-1),
+    replace_underscore_with_hyphen(true) {
     parse_arg(argc, argv);
   }
   arg(int& argc, char** argv, const int arg_min, const int arg_max):
     EMPTY_ARG(""), progname(argv[0]),
-    require_arg_min(arg_min), require_arg_max(arg_max) {
+    require_arg_min(arg_min), require_arg_max(arg_max),
+    replace_underscore_with_hyphen(true) {
     parse_arg(argc, argv);
   }
   arg(int& argc, char** argv, const char* prog, const int arg_min):
     EMPTY_ARG(""), progname(prog),
-    require_arg_min(arg_min), require_arg_max(-1) {
+    require_arg_min(arg_min), require_arg_max(-1),
+    replace_underscore_with_hyphen(true) {
     parse_arg(argc, argv);
   }
   arg(int& argc, char** argv, const char* prog, const int arg_min, const int arg_max):
     EMPTY_ARG(""), progname(prog),
-    require_arg_min(arg_min), require_arg_max(arg_max) {
+    require_arg_min(arg_min), require_arg_max(arg_max),
+    replace_underscore_with_hyphen(true) {
     parse_arg(argc, argv);
   }
   ~arg() {
@@ -405,6 +413,14 @@ private:
     }
     return false;
   }
+
+  std::string fix_long_option(const char *lopt) {
+    std::string str(lopt);
+    for (std::string::iterator it = str.begin(); it != str.end(); it++) {
+      if (replace_underscore_with_hyphen && *it == '_') *it = '-';
+    }
+    return str;
+  }
   
   std::string optname(const char* lopt, const char sopt) {
     std::ostringstream name;
@@ -416,19 +432,21 @@ private:
       name << "option '-" << sopt << "'";
     return name.str();
   }
-
+  
   template<typename T>
   void parse(T& target, const char* lopt, const char sopt, const char* help) {
-    std::string name = optname(lopt, sopt);
-    if (!parse_opt(target, lopt, sopt, help, name))
+    std::string lopt_fix = fix_long_option(lopt);
+    std::string name = optname(lopt_fix.c_str(), sopt);
+    if (!parse_opt(target, lopt_fix.c_str(), sopt, help, name))
       ERROR(name << " was not specified!");
   }
 
   template<typename T>
   void parse(T& target, const char* lopt, const char sopt,
              const char* help, T defval) {
-    std::string name = optname(lopt, sopt);
-    if (!parse_opt(target, lopt, sopt, help, name))
+    std::string lopt_fix = fix_long_option(lopt);
+    std::string name = optname(lopt_fix.c_str(), sopt);
+    if (!parse_opt(target, lopt_fix.c_str(), sopt, help, name))
       arg_helper::parser<T>::assign(target, defval);
   }
   
