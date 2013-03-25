@@ -17,6 +17,7 @@
 
 #define arg_begin(...) arg arg(argc,argv,##__VA_ARGS__)
 #define arg_end   arg.check()
+#define argg(var,...)  arg(var,#var,##__VA_ARGS__)
 #define argi(var,...)  int var; arg(var,#var,##__VA_ARGS__)
 #define argd(var,...)  double var; arg(var,#var,##__VA_ARGS__)
 #define argb(var,...)  bool var; arg(var,#var,##__VA_ARGS__)
