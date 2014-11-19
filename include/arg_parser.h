@@ -102,6 +102,9 @@ struct parser {
   iterator erase(const iterator& first, const iterator& last) {
     return arg_list.erase(first, last);
   }
+  size_t size() {
+    return arg_list.size();
+  }
   const std::string& operator[](int i) {
     if (i >= arg_list.size())
       helper::util::error("index is out of range!");
