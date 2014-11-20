@@ -64,33 +64,52 @@ struct parser {
 
     // check the number of arguments
     if (min_arg_count >= 0 && arg_list.size() < min_arg_count) {
+      // show error message
       std::ostringstream message;
       message <<
         "the number of arguments is less than expected! (expected at least: "
-        << min_arg_count << ", passed: " << arg_list.size() << ")";
-      helper::util::error(message.str());
-      help();
+        << min_arg_count << ", given: " << arg_list.size() << ")";
+      helper::util::error(message.str(), false);
+
+      // show usage and exit
+      std::cerr << std::endl;
+      show_usage();
+      std::exit(1);
     }
     if (max_arg_count >= 0 && arg_list.size() > max_arg_count) {
+      // show error message
       std::ostringstream message;
       message <<
         "the number of arguments is greater than expected! (expected at most: "
-        << min_arg_count << ", passed: " << arg_list.size() << ")";
-      helper::util::error(message.str());
+        << min_arg_count << ", given: " << arg_list.size() << ")";
+      helper::util::error(message.str(), false);
+
+      // show usage and exit
+      std::cerr << std::endl;
+      show_usage();
+      std::exit(1);
     }
   }
 
   // show help message and then exit
   void help() {
-    //std::cerr << "usage: " << prog_name << " " << usage << std::endl;
+    show_usage();
+    std::cerr << std::endl;
+    show_options();
+    std::exit(1);
+  }
+
+  void show_usage() {
     std::cerr << "USAGE" << std::endl;
-    std::cerr << indent << prog_name << " " << usage << std::endl << std::endl;
+    std::cerr << indent << prog_name << " " << usage << std::endl;
+  }
+
+  void show_options() {
     std::cerr << "OPTIONS" << std::endl;
     for (iterator it = help_messages.begin();
          it != help_messages.end(); it++) {
       std::cerr << *it;
     }
-    std::exit(1);
   }
 
   // container delegations
