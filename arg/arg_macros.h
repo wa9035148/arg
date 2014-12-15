@@ -3,6 +3,9 @@
 #define arg_begin(...)                      arg::parser args(argc,argv,##__VA_ARGS__)
 #define arg_end                             args.check()
 
+// for global variables
+#define arg_g(var,...)                      args.def(var,#var,##__VA_ARGS__)
+
 #define arg_i(var,...)   int var;           args.def(var,#var,##__VA_ARGS__)
 #define arg_l(var,...)   long int var;      args.def(var,#var,##__VA_ARGS__)
 #define arg_ll(var,...)  long long int var; args.def(var,#var,##__VA_ARGS__)
