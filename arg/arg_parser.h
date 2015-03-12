@@ -42,7 +42,7 @@ struct parser {
     for (int i=1; i<argc; i++) arg_list.push_back(argv[i]);
 
     // define default help option
-    def(show_help, "help", false).desc("Show this help and exit.");
+    def(show_help, "help", "false", "Show this help and exit.");
   }
 
   void check() {
@@ -125,9 +125,15 @@ struct parser {
     return arg_list.size();
   }
   const std::string& operator[](int i) {
-    if (i >= arg_list.size())
+    if (i < 0 || i >= arg_list.size())
       helper::util::error("index is out of range!");
     return arg_list[i];
+  }
+
+  // Throws: std::invalid_argument
+  template<typename T>
+  T as(int i) {
+    return helper::option<T>::cast(arg_list.at(i));
   }
 
   template<typename T>
@@ -158,52 +164,21 @@ struct parser {
   }
 
   template<typename T>
-  struct arg_info {
-    parser* p;
-    T& var;
-    const std::string& name;
-    const std::string longname;
-    std::vector<std::string> desc_;
-    bool has_default_value;
-    std::string default_value;
-
-    arg_info(parser* _p, T& _var, const std::string& _name):
-      p(_p), var(_var), name(_name),
-      longname("--" + helper::util::replace_all(name, '_', '-')),
-      has_default_value(false), default_value("") {}
-
-    // do parse at dtor
-    ~arg_info() {
-      p->parse(*this);
-    }
-
-    arg_info<T>& desc(const std::string& _desc) {
-      desc_.push_back(_desc);
-      return *this;
-    }
-
-    const std::vector<std::string>& desc() const { return desc_; }
-  };
-
-  template<typename T>
-  void gen_help(const arg_info<T>& ai) {
+  void gen_help(const std::string& long_name,
+      const std::string& defval, const std::string& desc)
+  {
     std::ostringstream str;
 
     // display option name
-    str << indent << ai.longname << " " << helper::option<T>::name();
+    str << indent << long_name << " " << helper::option<T>::name();
 
     // display default value
-    if (!ai.default_value.empty()) {
-      str << "   (default: " << ai.default_value << ")";
-    }
+    str << "   (default: " << defval << ")";
     str << std::endl;
 
     // display message
-    if (!ai.desc().empty()) {
-      for (std::vector<std::string>::const_iterator it = ai.desc().begin();
-          it != ai.desc().end(); it++) {
-        str << indent << indent << *it << std::endl;
-      }
+    if (!desc.empty()) {
+      str << indent << indent << desc << std::endl;
       str << std::endl;
     }
 
@@ -211,40 +186,51 @@ struct parser {
   }
 
   template<typename T>
-  void parse(arg_info<T>& ai) {
-    gen_help<T>(ai);
-    if (parse(ai.var, ai.longname) || ai.has_default_value) return;
-    if (!show_help) helper::util::error("option '" + ai.longname + "' is required!");
-  }
+  void def(T& var, const std::string& var_name,
+      const std::string& defval, const std::string& desc = "")
+  {
+    std::string long_name = "--" + helper::util::replace_all(var_name, '_', '-');
 
-  template<typename T>
-  arg_info<T> def(T& var, const std::string& name) {
-    arg_info<T> ai(this, var, name);
-    return ai;
-  }
-
-  template<typename T>
-  arg_info<T> def(T& var, const std::string& name, const T& defval) {
-    arg_info<T> ai(this, var, name);
-    var = defval;
-    ai.has_default_value = true;
-    return ai;
-  }
-
-  template<typename T>
-  arg_info<T> def(T& var, const std::string& name, const char* defval) {
-    arg_info<T> ai(this, var, name);
     try {
       var = helper::option<T>::cast(defval);
     } catch (const std::invalid_argument& ex) {
       std::string opt_desc = helper::option<T>::name();
       if (!opt_desc.empty()) opt_desc = " " + opt_desc;
       helper::util::error(std::string(ex.what()) + "! given '" + defval +
-          "' for the default value '" + ai.longname + opt_desc + "'");
+          "' for the default value of '" + long_name + opt_desc + "'");
     }
-    ai.has_default_value = true;
-    ai.default_value = std::string(defval);
-    return ai;
+
+    parse(var, long_name);
+
+    gen_help<T>(long_name, defval, desc);
+  }
+  
+  void def(bool& var, const std::string& var_name,
+      const std::string& defval, const std::string& desc = "")
+  {
+    std::string long_name_t    = "--"      + helper::util::replace_all(var_name, '_', '-');
+    std::string long_name_f    = "--no-"   + helper::util::replace_all(var_name, '_', '-');
+    std::string long_name_help = "--[no-]" + helper::util::replace_all(var_name, '_', '-');
+
+    bool var_t, var_f, var_defval;
+    bool parse_t = parse(var_t, long_name_t);
+    bool parse_f = parse(var_f, long_name_f);
+
+    if (defval == "true") var_defval = true;
+    else if (defval == "false") var_defval = false;
+    else helper::util::error("default value is invalid");
+
+    if (parse_t && parse_f)
+      helper::util::error("both '" + long_name_t + "' and '" + long_name_f + "' was specified!");
+
+    if (parse_t)
+      var = true;
+    else if (parse_f)
+      var = false;
+    else
+      var = var_defval;
+
+    gen_help<bool>(long_name_help, defval, desc);
   }
 };
 
