@@ -11,8 +11,8 @@
 #define arg_ll(var,defv,...)  long long int var; args.def(var,#var,#defv,##__VA_ARGS__)
 #define arg_d(var,defv,...)   double var;        args.def(var,#var,#defv,##__VA_ARGS__)
 #define arg_b(var,defv,...)   bool var;          args.def(var,#var,#defv,##__VA_ARGS__)
-#define arg_s(var,defv,...)   std::string var;   args.def(var,#var,#defv,##__VA_ARGS__)
+#define arg_s(var,defv,...)   std::string var;   args.def(var,#var, defv,##__VA_ARGS__)
 
 #define arg_iv(var,defv,...)  std::vector<int> var;         args.def(var,#var,#defv,##__VA_ARGS__)
 #define arg_dv(var,defv,...)  std::vector<double> var;      args.def(var,#var,#defv,##__VA_ARGS__)
-#define arg_sv(var,defv,...)  std::vector<std::string> var; args.def(var,#var,#defv,##__VA_ARGS__)
+#define arg_sv(var,defv,...)  std::vector<std::string> var; args.def(var,#var, defv,##__VA_ARGS__)
