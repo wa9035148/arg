@@ -21,14 +21,15 @@ struct desc {
 struct parser {
   typedef std::vector<std::string> str_vec;
 
-  std::string prog_name;
-  str_vec arg_list;
   const std::string usage;
   const int min_arg_count;
   const int max_arg_count;
-  str_vec help_messages;
+  std::string prog_name;
   bool show_help;
   std::string indent;
+
+  str_vec arg_list;
+  str_vec help_messages;
 
   parser(int argc, char** argv, const std::string& usage_ = "",
          int min_ = -1, int max_ = -1):
@@ -63,7 +64,7 @@ struct parser {
     }
 
     // check the number of arguments
-    if (min_arg_count >= 0 && arg_list.size() < min_arg_count) {
+    if (min_arg_count >= 0 && static_cast<int>(arg_list.size()) < min_arg_count) {
       // show error message
       std::ostringstream message;
       message <<
@@ -76,7 +77,8 @@ struct parser {
       show_usage();
       std::exit(1);
     }
-    if (max_arg_count >= 0 && arg_list.size() > max_arg_count) {
+
+    if (max_arg_count >= 0 && static_cast<int>(arg_list.size()) > max_arg_count) {
       // show error message
       std::ostringstream message;
       message <<
@@ -124,8 +126,8 @@ struct parser {
   size_t size() {
     return arg_list.size();
   }
-  const std::string& operator[](int i) {
-    if (i < 0 || i >= arg_list.size())
+  const std::string& operator[](size_t i) {
+    if (i >= arg_list.size())
       helper::util::error("index is out of range!");
     return arg_list[i];
   }
@@ -143,7 +145,7 @@ struct parser {
         // get value string
         iterator value_it = helper::option<T>::require_value() ? it+1 : it;
         if (value_it == arg_list.end())
-          helper::util::error("option '" + name + "' requires value!");
+          helper::util::error("the option '" + name + "' requires value!");
         // cast string to value
         try {
           var = helper::option<T>::cast(*value_it);
@@ -208,29 +210,63 @@ struct parser {
   void def(bool& var, const std::string& var_name,
       const std::string& defval, const std::string& desc = "")
   {
-    std::string long_name_t    = "--"      + helper::util::replace_all(var_name, '_', '-');
-    std::string long_name_f    = "--no-"   + helper::util::replace_all(var_name, '_', '-');
-    std::string long_name_help = "--[no-]" + helper::util::replace_all(var_name, '_', '-');
+    // option name
+    bool negative = var_name.find("no_", 0) == 0;
+    std::string opt_name = helper::util::replace_all(var_name, '_', '-');
 
-    bool var_t, var_f, var_defval;
-    bool parse_t = parse(var_t, long_name_t);
-    bool parse_f = parse(var_f, long_name_f);
-
-    if (defval == "true") var_defval = true;
+    // parse default value
+    bool var_defval;
+    if (defval == "true")       var_defval = true;
     else if (defval == "false") var_defval = false;
     else helper::util::error("default value is invalid");
 
-    if (parse_t && parse_f)
-      helper::util::error("both '" + long_name_t + "' and '" + long_name_f + "' was specified!");
+    std::string long_name_help;
 
-    if (parse_t)
-      var = true;
-    else if (parse_f)
-      var = false;
+    if (!var_defval && !negative)
+    {
+      // if default value is false
+
+      std::string long_name_t = "--" + opt_name;
+      long_name_help = long_name_t;
+
+      // parse option
+      bool var_t;
+      bool parse_t = parse(var_t, long_name_t);
+
+      if (parse_t)
+        var = true;
+      else
+        var = var_defval;
+    }
     else
-      var = var_defval;
+    {
+      if (negative) {
+        opt_name = opt_name.substr(3); // remove "no-"
+      }
 
-    gen_help<bool>(long_name_help, defval, desc);
+      std::string long_name_t = "--"      + opt_name;
+      std::string long_name_f = "--no-"   + opt_name;
+      long_name_help          = "--[no-]" + opt_name;
+
+      // parse option
+      bool var_t, var_f;
+      bool parse_t = parse(var_t, long_name_t);
+      bool parse_f = parse(var_f, long_name_f);
+
+      if (parse_t && parse_f)
+        helper::util::error("both '" + long_name_t + "' and '" + long_name_f + "' were specified!");
+      else if (parse_t)
+        var = true;
+      else if (parse_f)
+        var = false;
+      else
+        var = var_defval;
+
+      var ^= negative;
+    }
+
+    // help
+    gen_help<bool>(long_name_help, var_defval ? "true" : "false", desc);
   }
 };
 
