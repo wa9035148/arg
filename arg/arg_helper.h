@@ -22,7 +22,11 @@ struct util {
     if (value.empty())
       throw std::invalid_argument("empty");
     errno = 0;
+#if __cplusplus >= 201103L
     long long int v = std::strtoll(str, &endptr, 0);
+#else
+    long long int v = std::strtol(str, &endptr, 0);
+#endif
     if (errno == EINVAL)
       throw std::invalid_argument("invalid input");
     if (errno == ERANGE)
