@@ -22,7 +22,7 @@ struct util {
     if (value.empty())
       throw std::invalid_argument("empty");
     errno = 0;
-#if __cplusplus >= 201103L
+#if __cplusplus >= 201103L && !defined(__MSYS__)
     long long int v = std::strtoll(str, &endptr, 0);
 #else
     long long int v = std::strtol(str, &endptr, 0);
