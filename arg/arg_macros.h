@@ -9,6 +9,7 @@
 #define arg_i(var,defv,...)   int var;           args.def(var,#var,#defv,##__VA_ARGS__)
 #define arg_l(var,defv,...)   long int var;      args.def(var,#var,#defv,##__VA_ARGS__)
 #define arg_ll(var,defv,...)  long long int var; args.def(var,#var,#defv,##__VA_ARGS__)
+#define arg_ull(var,defv,...)  unsigned long long  var; args.def(var,#var,#defv,##__VA_ARGS__)
 #define arg_d(var,defv,...)   double var;        args.def(var,#var,#defv,##__VA_ARGS__)
 #define arg_b(var,defv,...)   bool var;          args.def(var,#var,#defv,##__VA_ARGS__)
 #define arg_s(var,defv,...)   std::string var;   args.def(var,#var, defv,##__VA_ARGS__)

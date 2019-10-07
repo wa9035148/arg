@@ -36,6 +36,26 @@ struct util {
     return v;
   }
 
+  static unsigned long long parse_unsigned_integer(const std::string& value) {
+    const char* str = value.c_str();
+    char* endptr;
+    if (value.empty())
+      throw std::invalid_argument("empty");
+    errno = 0;
+#if __cplusplus >= 201103L && !defined(__MSYS__)
+    unsigned long long v = std::strtoull(str, &endptr, 0);
+#else
+    unsigned long long v = std::strtoul(str, &endptr, 0);
+#endif
+    if (errno == EINVAL)
+      throw std::invalid_argument("invalid input");
+    if (errno == ERANGE)
+      throw std::invalid_argument("out of range");
+    if (endptr != str+value.size())
+      throw std::invalid_argument("invalid input");
+    return v;
+  }
+
   template<typename T>
   static std::vector<T> parse_list(std::string str) {
     typedef std::string::iterator itor;
@@ -96,6 +116,13 @@ struct option<long int> {
 template<>
 struct option<long long int> {
   static long long int cast(const std::string& value) { return util::parse_integer(value); }
+  static bool require_value() { return true; }
+  static std::string name() { return "<integer>"; }
+};
+
+template<>
+struct option<unsigned long long> {
+  static unsigned long long cast(const std::string& value) { return util::parse_unsigned_integer(value); }
   static bool require_value() { return true; }
   static std::string name() { return "<integer>"; }
 };
